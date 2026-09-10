@@ -157,3 +157,13 @@ Primary sources for this laboratory:
 - [HAPI FHIR JPA Server introduction](https://hapifhir.io/hapi-fhir/docs/server_jpa/introduction.html)
 
 Secondary summaries should not replace these sources.
+
+## Experimental results
+
+Initial operations were executed against HAPI FHIR 8.12.0 / FHIR R4 4.0.1 at `http://localhost:18080/fhir`.
+
+Notes from that run:
+
+- [results/01-metadata.md](results/01-metadata.md)
+- [results/02-create-read-patient.md](results/02-create-read-patient.md)
+- [results/03-search-patient.md](results/03-search-patient.md)
