@@ -1,0 +1,14 @@
+name: hin-fhir-lab-001
+
+services:
+  hin-fhir-lab-001:
+    image: hapiproject/hapi:v8.12.0-1
+    container_name: hin-fhir-lab-001
+    ports:
+      - "18080:8080"
+    networks:
+      - hin-fhir-lab-001
+
+networks:
+  hin-fhir-lab-001:
+    name: hin-fhir-lab-001
