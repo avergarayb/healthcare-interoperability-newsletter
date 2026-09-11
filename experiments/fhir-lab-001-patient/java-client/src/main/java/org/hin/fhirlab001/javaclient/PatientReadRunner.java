@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneOffset;
@@ -21,6 +22,7 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 @Component
+@ConditionalOnProperty(name = "fhir.operation", havingValue = "read")
 public class PatientReadRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PatientReadRunner.class);
