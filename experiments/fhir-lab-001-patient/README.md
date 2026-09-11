@@ -167,3 +167,4 @@ Notes from that run:
 - [results/01-metadata.md](results/01-metadata.md)
 - [results/02-create-read-patient.md](results/02-create-read-patient.md)
 - [results/03-search-patient.md](results/03-search-patient.md)
+- [results/04-java-client-read-patient.md](results/04-java-client-read-patient.md)
