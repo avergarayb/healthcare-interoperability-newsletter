@@ -1,133 +1,250 @@
 # FHIR Lab #003 — Spring FHIR Client
 
-Spring Boot scaffold that prepares later consumption of the laboratory HAPI FHIR server. This first phase creates the Maven project and starts an empty web application. It does **not** call FHIR.
+Spring Boot application that reads a FHIR R4 `Patient` from the reused HAPI server and exposes a smaller application API.
 
 Lab #001 and Lab #002 remain closed. This laboratory does not modify those experiments, their results, Java client, or infrastructure.
 
 ## 1. Objective
 
-Create a Java 21 / Spring Boot 3.5.16 Maven project that can later consume FHIR R4 resources from the reused HAPI at `http://localhost:18080/fhir`.
+Consume:
 
-The future target instances (created in Lab #002; logical ids are not portable across an H2 reset) are:
+```text
+GET {fhir.base-url}/Patient/{id}
+```
 
-| Resource | Logical id (Lab #002 run) |
-| --- | --- |
-| Patient | `1000` |
-| Practitioner | `1001` |
-| Organization | `1002` |
-| Encounter | `1003` |
-| Observation | `1004` |
+from Java 21 / Spring Boot **3.5.16** using Spring `RestClient`, and expose:
 
-This phase only prepares the application shell. It does not prove that those instances still exist, and it does not read them.
+```text
+GET http://localhost:8086/api/fhir/patients/{id}
+```
 
-## 2. Scope of this first phase
+Example: `GET http://localhost:8086/api/fhir/patients/1000` → `GET http://localhost:18080/fhir/Patient/1000`.
+
+## 2. Scope of this phase
 
 | In scope | Out of scope |
 | --- | --- |
-| Manual Maven / Spring Boot project (no Spring Initializr ZIP) | RestClient, WebClient, HAPI Generic Client |
-| `spring-boot-starter-web` and `spring-boot-starter-test` | Controllers, FHIR DTOs, HTTP calls |
-| `application.yml` with port `8086` and `fhir.base-url` | Search, Bundle handling |
-| Context-load test and a startable application | OAuth2 / SMART on FHIR |
-| Laboratory README | Database, RabbitMQ, Docker, AI |
+| `RestClient` with `fhir.base-url` and `Accept: application/fhir+json` | WebClient / WebFlux |
+| Controller → Service → FHIR client | HAPI FHIR Client / HAPI structures |
+| Small Patient DTOs | Full FHIR Patient model |
+| HTTP 200 / 400 / 404 / 502 / 500 | OAuth2 / SMART / security |
+| Tests that do not call live HAPI | FHIR Search / `Bundle` |
+| | Database, RabbitMQ, Docker, AI |
 
-## 3. Technologies and versions
+## 3. Technologies
 
 | Item | Version / value |
 | --- | --- |
 | Language | Java 21 |
-| Build | Maven (no wrapper in this phase) |
-| Spring Boot | **3.5.16** (not 4.x) |
-| Web | `spring-boot-starter-web` |
-| Test | `spring-boot-starter-test` (scope `test`) |
-| JSON | Jackson, via Spring Web (no extra Jackson dependency) |
-| FHIR release (context only) | R4, as used in Lab #001 / #002 |
+| Build | Maven (no wrapper) |
+| Spring Boot | **3.5.16** |
+| HTTP client | Spring `RestClient` (`spring-boot-starter-web`) |
+| Test | `spring-boot-starter-test` |
+| JSON | Jackson, via Spring Web |
+| FHIR | R4 on HAPI 8.12.0 |
 
-## 4. Dependencies added
+No extra Maven dependencies were added.
 
-Declared in `pom.xml`:
+## 4. Architecture and request flow
 
-- `org.springframework.boot:spring-boot-starter-web`
-- `org.springframework.boot:spring-boot-starter-test` (`scope` = `test`)
+```text
+HTTP client
+    |
+    v
+GET /api/fhir/patients/{id}          (this application, port 8086)
+    |
+    v
+PatientController
+    |
+    v
+PatientService  (rejects blank id)
+    |
+    v
+FhirPatientClient.getPatientById  (RestClient)
+    |
+    v
+GET {fhir.base-url}/Patient/{id}     (HAPI, port 18080)
+    |
+    v
+FHIR JSON Patient
+    |
+    v
+PatientResponse  (subset of fields)
+```
 
-Parent: `spring-boot-starter-parent` **3.5.16**.
+| Layer | Class | Responsibility |
+| --- | --- | --- |
+| Config | `RestClientConfig`, `FhirProperties` | `RestClient` from `fhir.base-url` |
+| Client | `FhirPatientClient` | `GET /Patient/{id}`, HTTP error mapping |
+| Service | `PatientService` | Blank-id check, then delegate |
+| Controller | `PatientController` | `GET /api/fhir/patients/{id}` |
+| Errors | `ApiExceptionHandler` | JSON `{ error, message }`, no stack traces |
 
-Not added: HAPI FHIR client libraries, Spring Security, Spring Data, messaging starters.
+The application path is not a FHIR endpoint. It is not `/fhir/Patient/{id}`.
 
-## 5. Server port
+## 5. Configuration
 
 ```yaml
 server:
   port: 8086
-```
 
-The application listens on **8086** so it does not collide with HAPI (`18080`) or a default Spring Boot `8080`.
+spring:
+  application:
+    name: lab-003-spring-fhir-client
 
-## 6. HAPI FHIR base URL
-
-```yaml
 fhir:
   base-url: http://localhost:18080/fhir
 ```
 
-This property is recorded for the next phase. This phase does not bind it to a client and does not send HTTP to HAPI.
+`FhirPatientClient` only appends `/Patient/{id}`. The HAPI URL is not hardcoded in the client.
 
-The HAPI process is the Lab #001 container (`hin-fhir-lab-001`). This laboratory does not start, change, or replace that server.
+## 6. DTOs
 
-## 7. Excluded functionality
+`PatientResponse`:
 
-Not implemented in this phase:
+- `resourceType`
+- `id`
+- `name` (`HumanNameResponse`: `family`, `given`)
+- `gender`
+- `birthDate`
 
-- RestClient / WebClient / a class named `FhirClient`
-- `PatientController` or any REST API of this application
-- FHIR DTOs
-- HTTP calls or tests against HAPI
-- FHIR search or `Bundle` processing
-- OAuth2 / SMART on FHIR / JWT
-- Database, RabbitMQ, Docker, Compose
-- AI / LLM
-- PUT, PATCH, DELETE, transaction Bundle
+If FHIR returns several `name` entries, the list is kept as returned. No extra names are invented.
 
-## 8. Next step
+Jackson ignores other FHIR fields (`meta`, `identifier`, …). They are not copied into the application body.
 
-Configure `RestClient` (or an equivalent Spring HTTP client) and **GET** `Patient/1000` from `fhir.base-url`. That work is a later task. It is not done here.
+## 7. Error handling
 
-## Requirements
+| Condition | Application HTTP | `error` |
+| --- | --- | --- |
+| Blank `{id}` | **400** | `invalid_id` |
+| HAPI 404 | **404** | `not_found` |
+| HAPI other 4xx/5xx | **502** | `upstream_error` |
+| Connection failure | **502** | `upstream_unavailable` |
+| Unexpected | **500** | `internal_error` |
 
-- Java 21
-- Maven 3.6.3 or later
+Errors are not returned as HTTP 200.
 
-HAPI does not need to be running for this phase’s `mvn clean test` or for starting the empty application.
-
-## Build and test
+## 8. Build, test, and run
 
 From this directory:
 
 ```text
 mvn clean test
-```
-
-On Windows, the same command. There is no Maven Wrapper (`mvnw` / `mvnw.cmd`) in this project.
-
-## Run
-
-```text
 mvn spring-boot:run
 ```
 
-Expected: Spring Boot starts and Tomcat listens on **8086**. There is no application endpoint yet; a request to `/` is not part of this phase’s contract.
+Unit tests do not call HAPI (`MockRestServiceServer` and mocks).
 
-## Coordinates
+## 9. Automated tests (executed)
+
+Command: `mvn clean test`
+
+First run failed: `MockRestResponseCreators.withException` requires `IOException`, not `ResourceAccessException`. The test was changed to `new IOException("Connection refused")`.
+
+Second run **Observed:** `BUILD SUCCESS`. Tests run: **12**, Failures: 0, Errors: 0, Skipped: 0.
+
+| Class | Tests | Coverage |
+| --- | --- | --- |
+| `FhirPatientClientTest` | 5 | 200 + Accept/`baseUrl`; several names; 404; HAPI 500; connection `IOException` |
+| `PatientControllerTest` | 5 | 200, 404, 502 unavailable, 502 HTTP error, 400 blank id |
+| `PatientServiceTest` | 1 | Blank / empty / null id does not call the FHIR client |
+| `FhirClientApplicationTests` | 1 | Context loads |
+
+## 10. Manual tests (executed)
+
+HAPI already held `Patient/1000` (Lucia / `LAB-002-PATIENT-001`) from the earlier restore in this laboratory.
+
+Application: `mvn spring-boot:run` — Tomcat on **8086**.
+
+### Application — existing patient
+
+```text
+curl.exe -i -sS -m 15 http://localhost:8086/api/fhir/patients/1000
+```
+
+**Observed:** HTTP **200**
+
+```json
+{"resourceType":"Patient","id":"1000","name":[{"family":"Example","given":["Lucia"]}],"gender":"female","birthDate":"1988-03-20"}
+```
+
+### Application — missing patient
+
+```text
+curl.exe -i -sS -m 15 http://localhost:8086/api/fhir/patients/does-not-exist
+```
+
+**Observed:** HTTP **404**
+
+```json
+{"error":"not_found","message":"Patient does-not-exist was not found"}
+```
+
+### Application — blank id
+
+```text
+curl.exe -i -sS -m 15 "http://localhost:8086/api/fhir/patients/%20"
+```
+
+**Observed:** HTTP **400**
+
+```json
+{"error":"invalid_id","message":"Patient id must not be blank"}
+```
+
+### HAPI — same instance
+
+```text
+curl.exe -i -sS -m 15 -H "Accept: application/fhir+json" http://localhost:18080/fhir/Patient/1000
+```
+
+**Observed:** HTTP **200**, `application/fhir+json`, body includes `meta` and `identifier` that the application DTO omits.
+
+### Application — HAPI unreachable
+
+HAPI was left running. The application was restarted with:
+
+```text
+mvn spring-boot:run "-Dspring-boot.run.arguments=--fhir.base-url=http://127.0.0.1:19999/fhir"
+```
+
+```text
+curl.exe -i -sS -m 15 http://localhost:8086/api/fhir/patients/1000
+```
+
+**Observed:** HTTP **502**
+
+```json
+{"error":"upstream_unavailable","message":"FHIR server is not reachable"}
+```
+
+## 11. Difficulties
+
+| Issue | Fix |
+| --- | --- |
+| `withException(ResourceAccessException)` did not compile | Use `IOException` |
+| `@WebMvcTest` does not load `@RestControllerAdvice` | `@Import(ApiExceptionHandler.class)` |
+
+## 12. Limitations
+
+- Logical id `1000` is not portable across HAPI / H2 recreates.
+- Read by id only. No search, no `Bundle`, no other resource types.
+- DTO is a subset, not a FHIR profile.
+- No authentication.
+- Data are fictitious. Lucia / `LAB-002-PATIENT-001` is not Lab #001 Ana / `LAB-001-0001`.
+
+## 13. Next technical step
+
+Implement FHIR Search and process a `searchset` `Bundle` (for example `Patient?identifier=...`), still without HAPI Generic Client unless a later decision changes that.
+
+## 14. Coordinates
 
 | Field | Value |
 | --- | --- |
 | Group | `com.healthcare.interoperability` |
 | Artifact | `lab-003-spring-fhir-client` |
-| Name | `lab-003-spring-fhir-client` |
 | Base package | `com.healthcare.interoperability.fhirclient` |
-| Main class | `com.healthcare.interoperability.fhirclient.FhirClientApplication` |
+| Local endpoint | `GET /api/fhir/patients/{id}` |
+| FHIR endpoint | `GET {fhir.base-url}/Patient/{id}` |
 
-## Relation to other laboratories
-
-- Lab #001: Patient HTTP + Java HAPI client. Closed. Do not modify.
-- Lab #002: related resources (Patient, Practitioner, Organization, Encounter, Observation). Closed. Do not modify.
-- Lab #003: new Spring Web application that will later consume that HAPI. This folder only.
+Decision record: [docs/decisions.md](docs/decisions.md).
