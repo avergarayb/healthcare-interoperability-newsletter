@@ -1,0 +1,9 @@
+server:
+  port: 8086
+
+spring:
+  application:
+    name: lab-004-search-bundles
+
+fhir:
+  base-url: http://localhost:18080/fhir
