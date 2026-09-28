@@ -1,0 +1,9 @@
+server:
+  port: 8087
+
+spring:
+  application:
+    name: lab-005-interoperability-architecture
+
+fhir:
+  base-url: http://localhost:18080/fhir
