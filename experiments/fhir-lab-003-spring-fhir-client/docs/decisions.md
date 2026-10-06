@@ -24,7 +24,7 @@ Statement kinds:
 **Consequences:**
 
 - Extra FHIR fields (`meta`, `identifier`, …) are ignored by Jackson, not rejected.
-- Search and `Bundle` handling remain a later phase.
+- FHIR Search, `Bundle`, and pagination are out of this laboratory. They belong to the next laboratory.
 - This module is not a replacement for Lab #001’s HAPI client.
 
 ## Other laboratory decisions
@@ -39,5 +39,6 @@ Statement kinds:
 | Missing Patient | HAPI HTTP 404 → `FhirResourceNotFoundException` → HTTP 404. |
 | Other HAPI HTTP errors | `FhirClientException.httpError` → HTTP 502 (`upstream_error`). |
 | Connection failure | `FhirClientException.unavailable` → HTTP 502 (`upstream_unavailable`). |
+| Unexpected errors | `Exception` → HTTP 500 `{ error: internal_error }`. No stack traces or exception messages in the JSON body. |
 | Tests | `MockRestServiceServer` on `RestClient.Builder` for the client; `@WebMvcTest` + `@MockitoBean` for the controller. No live HAPI in unit tests. |
-| Persistence of HAPI data | H2 without volume. `Patient/1000` can disappear after a container recreate. |
+| Persistence | This application does not persist FHIR resources. HAPI Lab #001 uses H2 without a volume; `Patient/1000` can disappear after a container recreate. |

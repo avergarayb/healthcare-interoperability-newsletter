@@ -141,12 +141,12 @@ Command: `mvn clean test`
 
 First run failed: `MockRestResponseCreators.withException` requires `IOException`, not `ResourceAccessException`. The test was changed to `new IOException("Connection refused")`.
 
-Second run **Observed:** `BUILD SUCCESS`. Tests run: **12**, Failures: 0, Errors: 0, Skipped: 0.
+Closure review **Observed:** `BUILD SUCCESS`. Tests run: **13**, Failures: 0, Errors: 0, Skipped: 0. The unexpected-500 controller case was added in that review.
 
 | Class | Tests | Coverage |
 | --- | --- | --- |
 | `FhirPatientClientTest` | 5 | 200 + Accept/`baseUrl`; several names; 404; HAPI 500; connection `IOException` |
-| `PatientControllerTest` | 5 | 200, 404, 502 unavailable, 502 HTTP error, 400 blank id |
+| `PatientControllerTest` | 6 | 200, 404, 502 unavailable, 502 HTTP error, 400 blank id, 500 without internal details |
 | `PatientServiceTest` | 1 | Blank / empty / null id does not call the FHIR client |
 | `FhirClientApplicationTests` | 1 | Context loads |
 
@@ -227,15 +227,26 @@ curl.exe -i -sS -m 15 http://localhost:8086/api/fhir/patients/1000
 
 ## 12. Limitations
 
+This laboratory is closed at Patient read-by-id. It does **not** implement:
+
+- FHIR Search
+- `Bundle` processing
+- pagination (`_count`, next links)
+- authentication against a FHIR server
+- local persistence of FHIR resources
+
+Also:
+
 - Logical id `1000` is not portable across HAPI / H2 recreates.
-- Read by id only. No search, no `Bundle`, no other resource types.
-- DTO is a subset, not a FHIR profile.
-- No authentication.
+- Only `Patient` is read, and only by logical id.
+- The DTO is a subset, not a FHIR profile.
 - Data are fictitious. Lucia / `LAB-002-PATIENT-001` is not Lab #001 Ana / `LAB-001-0001`.
 
-## 13. Next technical step
+## 13. Status and next laboratory
 
-Implement FHIR Search and process a `searchset` `Bundle` (for example `Patient?identifier=...`), still without HAPI Generic Client unless a later decision changes that.
+**Lab #003 is closed.** The implemented capability is `GET /api/fhir/patients/{id}` → `GET {fhir.base-url}/Patient/{id}` via Spring `RestClient`.
+
+The next laboratory will treat **FHIR Search** and **Bundles**.
 
 ## 14. Coordinates
 

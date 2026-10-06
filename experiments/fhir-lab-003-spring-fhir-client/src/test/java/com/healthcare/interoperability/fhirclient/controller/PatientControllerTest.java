@@ -92,4 +92,16 @@ class PatientControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("invalid_id"));
     }
+
+    @Test
+    void getPatientReturnsInternalErrorWithoutInternalDetails() throws Exception {
+        when(patientService.getPatientById("1000"))
+                .thenThrow(new IllegalStateException("secret-internal-detail"));
+
+        mockMvc.perform(get("/api/fhir/patients/1000").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("internal_error"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not("secret-internal-detail")));
+    }
 }
