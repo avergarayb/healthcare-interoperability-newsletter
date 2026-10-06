@@ -1,0 +1,13 @@
+{
+  "resourceType": "CodeSystem",
+  "url": "https://example.org/fhir/CodeSystem/preferred-contact-channel",
+  "name": "PreferredContactChannelCodes",
+  "status": "active",
+  "content": "complete",
+  "caseSensitive": true,
+  "concept": [
+    { "code": "phone" },
+    { "code": "email" },
+    { "code": "sms" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "resourceType": "ValueSet",
+  "url": "https://example.org/fhir/ValueSet/preferred-contact-channel",
+  "name": "PreferredContactChannelValueSet",
+  "status": "active",
+  "compose": {
+    "include": [
+      {
+        "system": "https://example.org/fhir/CodeSystem/preferred-contact-channel",
+        "concept": [
+          { "code": "phone" },
+          { "code": "email" },
+          { "code": "sms" }
+        ]
+      }
+    ]
+  }
+}
