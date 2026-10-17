@@ -1,0 +1,11 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: lab-007-fhir-integration-service
+
+fhir:
+  base-url: http://localhost:18080/fhir
+  connect-timeout: 2s
+  read-timeout: 5s
