@@ -1,0 +1,21 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: lab-008-clinical-event-producer
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: false
+        max.block.ms: 3000
+        request.timeout.ms: 3000
+        delivery.timeout.ms: 5000
+
+events:
+  topic: healthcare.observation.available.v1
+  partitions: 1

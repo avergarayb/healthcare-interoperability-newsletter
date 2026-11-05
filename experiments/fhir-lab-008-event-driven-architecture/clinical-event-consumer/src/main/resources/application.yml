@@ -1,0 +1,37 @@
+server:
+  port: 8092
+
+spring:
+  application:
+    name: lab-008-clinical-event-consumer
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: lab-008-observation-processor
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      properties:
+        enable.idempotence: false
+
+events:
+  topic: healthcare.observation.available.v1
+  dead-letter-topic: healthcare.observation.available.v1.DLT
+  group-id: lab-008-observation-processor
+  dead-letter-group-id: lab-008-dlt-inspector
+  # Retries after the first delivery. Total attempts = 1 + retry-attempts.
+  retry-interval: 500ms
+  retry-attempts: 2
+  partitions: 1
+
+fhir:
+  base-url: http://localhost:18080/fhir
+  connect-timeout: 2s
+  read-timeout: 5s
